@@ -118,6 +118,26 @@
             margin: 0;
             font-size: 0.9em;
         }
+
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .gallery img {
+            width: 300px;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .gallery img:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -138,7 +158,20 @@
             <li>Escenarios renovados para una experiencia más envolvente.</li>
             <li>Compatibilidad optimizada para PSP, con un rendimiento fluido.</li>
         </ul>
+    </section>
 
+    <!-- Galería del mod -->
+    <section>
+        <h2>Galería de Imágenes del Mod</h2>
+        <div class="gallery">
+            <img src="mod1.jpg" alt="Mod Tekken 7 - Imagen 1">
+            <img src="mod2.jpg" alt="Mod Tekken 7 - Imagen 2">
+            <img src="mod3.jpg" alt="Mod Tekken 7 - Imagen 3">
+        </div>
+    </section>
+
+    <!-- Descargas -->
+    <section>
         <div class="download-links">
             <h2>Descargas del Juego</h2>
             <div class="version-section">
