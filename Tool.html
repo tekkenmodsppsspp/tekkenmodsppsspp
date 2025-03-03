@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimización de Archivos Grandes</title>
+    <style>
+body {
+    font-family: Arial, sans-serif;
+    background: #1e1e2e;
+    color: #fff;
+    text-align: center;
+}
+
+header {
+    background: #282a36;
+    padding: 1px;
+    font-size: 10px;
+    font-weight: bold;
+    border-bottom: 3px solid #ff79c6;
+}
+
+main {
+    max-width: 300px;
+    margin: 2px auto;
+    padding: 20px;
+    background: #2a2e3b;
+    border-radius: 8px;
+}
+
+label, input, select, button {
+    width: 100%;
+    margin: 1px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+}
+
+input, select {
+    background: #3a4d6a;
+    color: white;
+}
+
+button {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#btn-replace { background: #ff5555; color: white; }
+#btn-download { background: #50fa7b; color: black; }
+#btn-extract-download { background: #bd93f9; color: white; }
+
+button:hover {
+    opacity: 0.8;
+}
+#image-reference {
+    max-width: 100%; /* Para que no se salga del contenedor */
+    height: auto; /* Mantiene la proporción */
+    display: block; /* Centra la imagen */
+    margin: 10px auto;
+    border-radius: 5px; /* Bordes redondeados */
+    border: 2px solid #ff79c6; /* Borde para resaltar */
+}
+
+
+
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Luis F./Tool V 6.8</h1>
+    </header>
+    <main>
+        <label for="file1">Archivo base ISO: 💿</label>
+        <input type="file" id="file1" accept=".txt, .bin, .hex, .obj">
+
+        <label for="file2">Archivo de reemplazo bin: 📁</label>
+        <input type="file" id="file2" accept=".txt, .bin, .hex, .obj">
+
+        <label for="range">Dirección inicio-final:</label>
+        <input type="text" id="range" placeholder="Ej: 10-5">
+
+        <label for="sizeAddress">Dirección de tamaño:</label>
+        <input type="text" id="sizeAddress" placeholder="Ej: 954AE782">
+
+        <label for="select-category">Selecciona una categoría:</label>
+        <select id="select-category">
+            <option value="1">music AT3 🎧</option>
+            <option value="2">vag</option>
+            <option value="3">SWG</option>
+            <option value="4">Animations 🧸🧸</option>
+            <option value="5">character ☑️</option>
+            <option value="6">stages 🏞</option>
+            <option value="7">vag pelea.bin</option>
+            <option value="8">eboot.bin</option>
+        </select>
+
+        <label for="select-addresses">Selecciona una dirección:</label>
+        <select id="select-addresses"></select>
+
+        <label for="address-search">Buscar dirección:</label>
+        <div>
+            <input type="text" id="address-search" placeholder="Ingresa parte de la dirección...">
+        </div>
+
+        <button id="btn-replace">Reemplazar</button>
+        <button id="btn-download">Descargar Modificado</button>
+        <button id="btn-extract-download">Extraer.bin 📥</button>
+
+        <div id="result"></div>
+        <img id="image-reference" src="" alt="Imagen de referencia" style="display:none;">
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const file1Input = document.getElementById("file1");
+            const file2Input = document.getElementById("file2");
+            const resultDiv = document.getElementById("result");
+            const rangeInput = document.getElementById("range");
+            const sizeAddressInput = document.getElementById("sizeAddress");
+            const selectAddresses = document.getElementById("select-addresses");
+            const selectCategory = document.getElementById("select-category");
+            const imageReference = document.getElementById("image-reference");
+            const addressSearchInput = document.getElementById("address-search");
+
+            let modifiedFileBuffer = null;
+            let replaceCounter = 0;
+            let lastFoundValue1 = 0; // Almacena la posición de la primera secuencia
+            let lastFoundValue2 = 0; // Almacena la posición de la segunda secuencia
+
+            const newSearchSequence = "01 00 00 00 4c 17 22 00 67 fe 39 04";
+            const fixedSearchSequence = "c5 60 70 f8"; // Secuencia hexadecimal permanente
+
+            const addresses = {
+                "1": [
+            { value: "22bc000-233a1a0,65a8", label: "character selec", image: "null.png" },
+            { value: "2106b800-2111cd30,65a8", label: "Main menu", image: "null.png" },
+            { value: "1d4b800-1E65730,65a8", label: "customizacion", image: "null.png" },
+            
+                  
+                  
+                  
+
+
+            { value: "1e9de000-1ECD91D0,65a8", label: "practica on", image: "null.png" },
+            { value: "1ecda000-1EFD51D0,65a8", label: "practica of", image: "null.png" },
+            { value: "1e365800-1E5D34C0,65a8", label: "Electric Fountain", image: "018.jpg" },
+            
+            
+                ],
+                "2": [
+            { value: "6ed000-6F5E90,65a8", label: "selec vag", image: "null.png" },
+            { value: "6f6000-6FC8C0,65a8", label: "main menu vag", image: "null.png" },
+            
+            { value: "2254000-2265C00,65a8", label: "get vag", image: "null.png" },
+            { value: "2f33000-2FC12D0,65a8", label: "Round vag", image: "null.png" },
+            { value: "2266000-22BB644,65a8", label: "Announcer vag", image: "null.png" },
+
+            
+            
+            
+                ],
+                "3": [
+            { value: "1E86000-1F3FC6C,65a8", label: "selec SWG", image: "tex.png" },
+            { value: "1f40000-1FB9110,65a8", label: "selec Textura de Fondo", image: "tex.png" },
+            { value: "1fb9800-22539C0,65a8", label: "selec Textura de Personajes", image: "tex.png" },
+            { value: "1802000-183E100,65a8", label: "MAIN completa", image: "tex.png" },
+            { value: "180205b-180B02F,65a8", label: "MAIN SWG", image: "tex.png" },
+            { value: "180b04b-182486F,65a8", label: "MAIN texturas", image: "tex.png" },
+            { value: "2A32800-2AF3140,65a8", label: "VS / SWG", image: "tex.png" },
+            { value: "2AF3800-2B64720,65a8", label: "VS texturas de Fondo", image: "tex.png" },
+            { value: "2C7A000-2C82060,65a8", label: "VS texturas de Personajes", image: "tex.png" },
+            { value: "1b22000-1B2E524,65a8", label: "customizacion SWG externo", image: "tex.png" },
+            { value: "1d3a000-1D47E90,65a8", label: "customizacion SWG de Fondo", image: "tex.png" },
+            
+            
+            
+            
+                ],
+                "4": [
+            { value: "13733800-13A38800,589c", label: "PAUL_MOTA", image: "tex.png" },
+            { value: "13a39000-13A57400,58a8", label: "PAUL_GZIP", image: "tex.png" },
+                    
+            { value: "13a57800-13D5C800,58b4", label: "LAW_MOTA", image: "tex.png" },
+            { value: "13d5d000-13D7B400,58c0", label: "LAW_GZIP", image: "tex.png" },
+                    
+            { value: "185b7800-188BC800,5af4", label: "BAEK_MOTA", image: "tex.png" },
+            { value: "188bd000-188DB400,5b00", label: "BAEK_GZIP", image: "tex.png" },
+                    
+            { value: "143C3800-146C8800,58fc", label: "yoshimitsu_MOTA", image: "tex.png" },
+            { value: "146c9000-146E7400,5908", label: "yoshimitsu_GZIP", image: "tex.png" },
+            
+            { value: "15053800-15358800,595c", label: "Crirstie_MOTA", image: "tex.png" },
+            { value: "15359000-15377400,5968", label: "Crirstie_GZIP", image: "tex.png" },
+            
+            { value: "18bff800-18F04800,5b24", label: "Raven_MOTA", image: "tex.png" },
+            { value: "18f05000-18F23400,5b30", label: "Raven_GZIP", image: "tex.png" },
+            
+                ],
+                "5": [
+            { value: "0373c800-03755FEF,3880", label: "Rojer JR 1", image: "tex.png" },
+            { value: "03756000-037737EF,388c", label: "Rojer JR 2", image: "tex.png" },
+            { value: "03773800-03785FEF,3898", label: "Rojer JR 3", image: "tex.png" },
+            { value: "03786000-03956FEF,38a4", label: "Rojer JR 4", image: "tex.png" },
+            { value: "03957000-03C2A7EF,38b0", label: "Rojer JR 5", image: "tex.png" },
+            { value: "03c2a800-03C2BFEF,38bc", label: "Rojer JR 6", image: "tex.png" },
+            { value: "03c2c000-03C457EF,38d4", label: "Paul 1", image: "tex.png" },
+            { value: "03c45800-03C62FEF,38e0", label: "Paul 2", image: "tex.png" },
+            { value: "03c63000-03C757EF,38ec", label: "Paul 3", image: "tex.png" },
+            { value: "03c75800-03E467EF,38f8", label: "Paul 4", image: "tex.png" },
+            { value: "03e46800-04119FEF,3904", label: "Paul 5", image: "tex.png" },
+            { value: "0411a000-0411B7EF,3910", label: "Paul 6", image: "tex.png" },
+            { value: "0411b800-04134FEF,3928", label: "Law 1", image: "tex.png" },
+            { value: "04135000-041527EF,3934", label: "Law 2", image: "tex.png" },
+            { value: "04152800-04164FEF,3940", label: "Law 3", image: "tex.png" },
+            { value: "04165000-04335FEF,394c", label: "Law 4", image: "tex.png" },
+            { value: "04336000-046097EF,3958", label: "Law 5", image: "tex.png" },
+            { value: "04609800-0460D164,04", label: "Law 6", image: "tex.png" },
+            { value: "0460b000-046247EF,397c", label: "Lei 1", image: "tex.png" },
+            { value: "04624800-04641FEF,3988", label: "Lei 2", image: "tex.png" },
+            { value: "04642000-046547EF,3994", label: "Lei 3", image: "tex.png" },
+            { value: "04654800-048257EF,39a0", label: "Lei 4", image: "tex.png" },
+            { value: "04825800-04AF8FEF,39ac", label: "Lei 5", image: "tex.png" },
+            { value: "04af9000-04AFA7EF,39b8", label: "Lei 6", image: "tex.png" },
+            { value: "04afa800-04B13FEF,39d0", label: "King 1", image: "tex.png" },
+            { value: "04b14000-04B317EF,39dc", label: "King 2", image: "tex.png" },
+            { value: "04b31800-04B43FEF,39e8", label: "King 3", image: "tex.png" },
+            { value: "04b44000-04D14FEF,39f4", label: "King 4", image: "tex.png" },
+            { value: "04d15000-04FE87EF,3a00", label: "King 5", image: "tex.png" },
+            { value: "04fe8800-04FE9FEF,3a0c", label: "King 6", image: "tex.png" },
+            { value: "04fea000-050037EF,3a24", label: "yoshimitsu 1", image: "tex.png" },
+            { value: "05003800-05020FEF,3a30", label: "yoshimitsu 2", image: "tex.png" },
+            { value: "05021000-050337EF,3a3c", label: "yoshimitsu 3", image: "tex.png" },
+            { value: "05033800-052047EF,3a48", label: "yoshimitsu 4", image: "tex.png" },
+            { value: "05204800-054D7FEF,3a54", label: "yoshimitsu 5", image: "tex.png" },
+            { value: "054d8000-054D97EF,3a60", label: "yoshimitsu 6", image: "tex.png" },
+            { value: "054d9800-054F2FEF,3a78", label: "nina 1", image: "tex.png" },
+            { value: "054f3000-055107EF,3a84", label: "nina 2", image: "tex.png" },
+            { value: "05510800-05522FEF,3a90", label: "nina 3", image: "tex.png" },
+            { value: "05523000-056F3FEF,3a9c", label: "nina 4", image: "tex.png" },
+            { value: "056f4000-059C77EF,3aa8", label: "nina 5", image: "tex.png" },
+            { value: "059c7800-059C8FEF,3ab4", label: "nina 6", image: "tex.png" },
+            { value: "059c9000-059E27EF,3acc", label: "hwoarang 1", image: "tex.png" },
+            { value: "059e2800-059FFFEF,3ad8", label: "hwoarang 2", image: "tex.png" },
+            { value: "05a00000-05A127EF,3ae4", label: "hwoarang 3", image: "tex.png" },
+            { value: "05a12800-05BE37EF,3af0", label: "hwoarang 4", image: "tex.png" },
+            { value: "05be3800-05EB6FEF,3afc", label: "hwoarang 5", image: "tex.png" },
+            { value: "05eb7000-05EB87EF,3b08", label: "hwoarang 6", image: "tex.png" },
+            { value: "05eb8800-05ED1FEF,3b20", label: "xiaoyu 1", image: "tex.png" },
+            { value: "05ed2000-05EEF7EF,3b2c", label: "xiaoyu 2", image: "tex.png" },
+            { value: "05eef800-05F01FEF,3b38", label: "xiaoyu 3", image: "tex.png" },
+            { value: "05f02000-060D2FEF,3b44", label: "xiaoyu 4", image: "tex.png" },
+            { value: "060d3000-063A67EF,3b50", label: "xiaoyu 5", image: "tex.png" },
+            { value: "063a6800-063A7FEF,3b5c", label: "xiaoyu 6", image: "tex.png" },
+            { value: "063a8000-063C17EF,3b74", label: "christie 1", image: "tex.png" },
+            { value: "063c1800-063DEFEF,3b80", label: "christie 2", image: "tex.png" },
+            { value: "063df000-063F17EF,3b8c", label: "christie 3", image: "tex.png" },
+            { value: "063f1800-065C27EF,3b98", label: "christie 4", image: "tex.png" },
+            { value: "065c2800-06895FEF,3ba4", label: "christie 5", image: "tex.png" },
+            { value: "06896000-068977EF,3bb0", label: "christie 6", image: "tex.png" },
+            { value: "06897800-068B0FEF,3bc8", label: "jin 1", image: "tex.png" },
+            { value: "068b1000-068CE7EF,3bd4", label: "jin 2", image: "tex.png" },
+            { value: "068ce800-068E0FEF,3be0", label: "jin 3", image: "tex.png" },
+            { value: "068e1000-06AB1FEF,3bec", label: "jin 4", image: "tex.png" },
+            { value: "06ab2000-06D857EF,3bf8", label: "jin 5", image: "tex.png" },
+            { value: "06d85800-06D86FEF,3c04", label: "jin 6", image: "tex.png" },
+            { value: "06d87000-06DA07EF,3c1c", label: "julia 1", image: "tex.png" },
+            { value: "06da0800-06DBDFEF,3c28", label: "julia 2", image: "tex.png" },
+            { value: "06dbe000-06DD07EF,3c34", label: "julia 3", image: "tex.png" },
+            { value: "06dd0800-06FA17EF,3c40", label: "julia 4", image: "tex.png" },
+            { value: "06fa1800-07274FEF,3c4c", label: "julia 5", image: "tex.png" },
+            { value: "07275000-072767EF,3c58", label: "julia 6", image: "tex.png" },
+            { value: "07276800-0728FFEF,3c70", label: "kuma 1", image: "tex.png" },
+            { value: "07290000-072AD7EF,3c7c", label: "kuma 2", image: "tex.png" },
+            { value: "072ad800-072BFFEF,3c88", label: "kuma 3", image: "tex.png" },
+            { value: "072c0000-07490FEF,3c94", label: "kuma 4", image: "tex.png" },
+            { value: "07491000-077647EF,3ca0", label: "kuma 5", image: "tex.png" },
+            { value: "07764800-07765FEF,3cac", label: "kuma 6", image: "tex.png" },
+            { value: "07766000-0777F7EF,3cc4", label: "panda 1", image: "tex.png" },
+            { value: "0777f800-0779CFEF,3cd0", label: "panda 2", image: "tex.png" },
+            { value: "0779d000-077AF7EF,3cdc", label: "panda 3", image: "tex.png" },
+            { value: "077af800-079807EF,3ce8", label: "panda 4", image: "tex.png" },
+            { value: "07980800-07C53FEF,3cf4", label: "panda 5", image: "tex.png" },
+            { value: "07c54000-07C557EF,3d00", label: "panda 6", image: "tex.png" },
+            { value: "07c55800-07C6EFEF,3d18", label: "bryan 1", image: "tex.png" },
+            { value: "07c6f000-07C8C7EF,3d24", label: "bryan 2", image: "tex.png" },
+            { value: "07c8c800-07C9EFEF,3d30", label: "bryan 3", image: "tex.png" },
+            { value: "07c9f000-07E6FFEF,3d3c", label: "bryan 4", image: "tex.png" },
+            { value: "07e70000-081437EF,3d48", label: "bryan 5", image: "tex.png" },
+            { value: "08143800-08144FEF,3d54", label: "bryan 6", image: "tex.png" },
+            { value: "08145000-0815E7EF,3d6c", label: "heihachi 1 IM03", image: "tex.png" },
+            { value: "0815e800-0817BFEF,3d78", label: "heihachi 2", image: "tex.png" },
+            { value: "0817c000-0818E7EF,3d84", label: "heihachi 3", image: "tex.png" },
+            { value: "0818e800-0835F7EF,3d90", label: "heihachi 4 3D", image: "tex.png" },
+            { value: "0835f800-08632FEF,3d9c", label: "heihachi 5 Textura", image: "tex.png" },
+            { value: "08633000-086347EF,3da8", label: "heihachi 6", image: "tex.png" },
+            { value: "08634800-0864DFEF,3dc0", label: "kazuya 1", image: "tex.png" },
+            { value: "0864e000-0866B7EF,3dcc", label: "kazuya 2", image: "tex.png" },
+            { value: "0866b800-0867DFEF,3dd8", label: "kazuya 3", image: "tex.png" },
+            { value: "0867e000-0884EFEF,3de4", label: "kazuya 4", image: "tex.png" },
+            { value: "0884f000-08B227EF,3df0", label: "kazuya 5", image: "tex.png" },
+            { value: "08b22800-08B23FEF,3dfc", label: "kazuya 6", image: "tex.png" },
+            { value: "08b24000-08B3D7EF,3e14", label: "lee 1", image: "tex.png" },
+            { value: "08b3d800-08B5AFEF,3e20", label: "lee 2", image: "tex.png" },
+            { value: "08b5b000-08B6D7EF,3e2c", label: "lee 3", image: "tex.png" },
+            { value: "08b6d800-08D3E7EF,3e38", label: "lee 4", image: "tex.png" },
+            { value: "08d3e800-09011FEF,3e44", label: "lee 5", image: "tex.png" },
+            { value: "09012000-090137EF,3e50", label: "lee 6", image: "tex.png" },
+            { value: "09013800-0902CFEF,3e68", label: "steve fox 1", image: "tex.png" },
+            { value: "0902d000-0904A7EF,3e74", label: "steve fox 2", image: "tex.png" },
+            { value: "0904a800-0905CFEF,3e80", label: "steve fox 3", image: "tex.png" },
+            { value: "0905d000-0922DFEF,3e8c", label: "steve fox 4", image: "tex.png" },
+            { value: "0922e000-095017EF,3e98", label: "steve fox 5", image: "tex.png" },
+            { value: "09501800-09502FEF,3ea4", label: "steve fox 6", image: "tex.png" },
+            { value: "09503000-0951C7EF,3ebc", label: "marduk 1", image: "tex.png" },
+            { value: "0951c800-09539FEF,3ec8", label: "marduk 2", image: "tex.png" },
+            { value: "0953a000-0954C7EF,3ed4", label: "marduk 3", image: "tex.png" },
+            { value: "0954c800-0971D7EF,3ee0", label: "marduk 4", image: "tex.png" },
+            { value: "0971d800-099F0FEF,3eec", label: "marduk 5", image: "tex.png" },
+            { value: "099f1000-099F27EF,3ef8", label: "marduk 6", image: "tex.png" },
+            { value: "099f2800-09A0BFEF,3f10", label: "eddy 1", image: "tex.png" },
+            { value: "09a0c000-09A297EF,3f1c", label: "eddy 2", image: "tex.png" },
+            { value: "09a29800-09A3BFEF,3f28", label: "eddy 3", image: "tex.png" },
+            { value: "09a3c000-09C0CFEF,3f34", label: "eddy 4", image: "tex.png" },
+            { value: "09c0d000-09EE07EF,3f40", label: "eddy 5", image: "tex.png" },
+            { value: "09ee0800-09EE1FEF,3f4c", label: "eddy 6", image: "tex.png" },
+            { value: "09ee2000-09EFB7EF,3f64", label: "jack 6 1", image: "tex.png" },
+            { value: "09efb800-09F18FEF,3f70", label: "jack 6 2", image: "tex.png" },
+            { value: "09f19000-09F2B7EF,3f7c", label: "jack 6 3", image: "tex.png" },
+            { value: "09f2b800-0A0FC7EF,3f88", label: "jack 6 4", image: "tex.png" },
+            { value: "0a0fc800-0A3CFFEF,3f94", label: "jack 6 5", image: "tex.png" },
+            { value: "0a3d0000-0A3D17EF,3fa0", label: "jack 6 6", image: "tex.png" },
+            { value: "0a3d1800-0A3EAFEF,3fb8", label: "anna 1", image: "tex.png" },
+            { value: "0a3eb000-0A4087EF,3fc4", label: "anna 2", image: "tex.png" },
+            { value: "0a408800-0A41AFEF,3fd0", label: "anna 3", image: "tex.png" },
+            { value: "0a41b000-0A5EBFEF,3fdc", label: "anna 4", image: "tex.png" },
+            { value: "0a5ec000-0A8BF7EF,3fe8", label: "anna 5", image: "tex.png" },
+            { value: "0a8bf800-0A8C0FEF,3ff4", label: "anna 6", image: "tex.png" },
+            { value: "0a8c1000-0A8DA7EF,400c", label: "wang 1", image: "tex.png" },
+            { value: "0a8da800-0A8F7FEF,4018", label: "wang 2", image: "tex.png" },
+            { value: "0a8f8000-0A90A7EF,4024", label: "wang 3", image: "tex.png" },
+            { value: "0a90a800-0AADB7EF,4030", label: "wang 4", image: "tex.png" },
+            { value: "0aadb800-0ADAEFEF,403c", label: "wang 5", image: "tex.png" },
+            { value: "0adaf000-0ADB07EF,4048", label: "wang 6", image: "tex.png" },
+            { value: "0adb0800-0ADC9FEF,4060", label: "ganryu 1", image: "tex.png" },
+            { value: "0adca000-0ADE77EF,406c", label: "ganryu 2", image: "tex.png" },
+            { value: "0ade7800-0ADF9FEF,4078", label: "ganryu 3", image: "tex.png" },
+            { value: "0adfa000-0AFCAFEF,4084", label: "ganryu 4", image: "tex.png" },
+            { value: "0afcb000-0B29E7EF,4090", label: "ganryu 5", image: "tex.png" },
+            { value: "0b29e800-0B29FFEF,409c", label: "ganryu 6", image: "tex.png" },
+            { value: "0b2a0000-0B2B97EF,40b4", label: "asuka 1", image: "tex.png" },
+            { value: "0b2b9800-0B2D6FEF,40c0", label: "asuka 2", image: "tex.png" },
+            { value: "0b2d7000-0B2E97EF,40cc", label: "asuka 3", image: "tex.png" },
+            { value: "0b2e9800-0B4BA7EF,40d8", label: "asuka 4", image: "tex.png" },
+            { value: "0b4ba800-0B78DFEF,40e4", label: "asuka 5", image: "tex.png" },
+            { value: "0b78e000-0B78F7EF,40f0", label: "asuka 6", image: "tex.png" },
+            { value: "0b78f800-0B7A8FEF,4108", label: "bruce 1", image: "tex.png" },
+            { value: "0b7a9000-0B7C67EF,4114", label: "bruce 2", image: "tex.png" },
+            { value: "0b7c6800-0B7D8FEF,4120", label: "bruce 3", image: "tex.png" },
+            { value: "0b7d9000-0B9A9FEF,412c", label: "bruce 4", image: "tex.png" },
+            { value: "0b9aa000-0BC7D7EF,4138", label: "bruce 5", image: "tex.png" },
+            { value: "0bc7d800-0BC7EFEF,4144", label: "bruce 6", image: "tex.png" },
+            { value: "0bc7f000-0BC987EF,415c", label: "baek 1", image: "tex.png" },
+            { value: "0bc98800-0BCB5FEF,4168", label: "baek 2", image: "tex.png" },
+            { value: "0bcb6000-0BCC87EF,4174", label: "baek 3", image: "tex.png" },
+            { value: "0bcc8800-0BE997EF,4180", label: "baek 4", image: "tex.png" },
+            { value: "0be99800-0C16CFEF,418c", label: "baek 5", image: "tex.png" },
+            { value: "0c16d000-0C16E7EF,4198", label: "baek 6", image: "tex.png" },
+            { value: "0c16e800-0C187FEF,41b0", label: "devil jin 1", image: "tex.png" },
+            { value: "0c188000-0C1A57EF,41bc", label: "devil jin 2", image: "tex.png" },
+            { value: "0c1a5800-0C1B7FEF,41c8", label: "devil jin 3", image: "tex.png" },
+            { value: "0c1b8000-0C388FEF,41d4", label: "devil jin 4", image: "tex.png" },
+            { value: "0c389000-0C65C7EF,41e0", label: "devil jin 5", image: "tex.png" },
+            { value: "0c65c800-0C65DFEF,41ec", label: "devil jin 6", image: "tex.png" },
+            { value: "0c65e000-0C6777EF,4204", label: "raven 1", image: "tex.png" },
+            { value: "0c677800-0C694FEF,4210", label: "raven 2", image: "tex.png" },
+            { value: "0c695000-0C6A77EF,421c", label: "raven 3", image: "tex.png" },
+            { value: "0c6a7800-0C8787EF,4228", label: "raven 4", image: "tex.png" },
+            { value: "0c878800-0CB4BFEF,4234", label: "raven 5", image: "tex.png" },
+            { value: "0cb4c000-0CB4D7EF,4240", label: "raven 6", image: "tex.png" },
+            { value: "0cb4d800-0CB66FEF,4258", label: "feng 1", image: "tex.png" },
+            { value: "0cb67000-0CB847EF,4264", label: "feng 2", image: "tex.png" },
+            { value: "0cb84800-0CB96FEF,4270", label: "feng 3", image: "tex.png" },
+            { value: "0cb97000-0CD67FEF,427c", label: "feng 4", image: "tex.png" },
+            { value: "0cd68000-0D03B7EF,4288", label: "feng 5", image: "tex.png" },
+            { value: "0d03b800-0D03CFEF,4294", label: "feng 6", image: "tex.png" },
+            { value: "0d03d000-0D0567EF,42ac", label: "armor king 1", image: "tex.png" },
+            { value: "0d056800-0D073FEF,42b8", label: "armor king 2", image: "tex.png" },
+            { value: "0d074000-0D0867EF,42c4", label: "armor king 3", image: "tex.png" },
+            { value: "0d086800-0D2577EF,42d0", label: "armor king 4", image: "tex.png" },
+            { value: "0d257800-0D52AFEF,42dc", label: "armor king 5", image: "tex.png" },
+            { value: "0d52b000-0D52C7EF,42e8", label: "armor king 6", image: "tex.png" },
+            { value: "0d52c800-0D545FEF,4300", label: "lili 1", image: "tex.png" },
+            { value: "0d546000-0D5637EF,430c", label: "lili 2", image: "tex.png" },
+            { value: "0d563800-0D575FEF,4318", label: "lili 3", image: "tex.png" },
+            { value: "0d576000-0D746FEF,4324", label: "lili 4", image: "tex.png" },
+            { value: "0d747000-0DA1A7EF,4330", label: "lili 5", image: "tex.png" },
+            { value: "0da1a800-0DA1BFEF,433c", label: "lili 6", image: "tex.png" },
+            { value: "0da1c000-0DA357EF,4354", label: "dragunov 1", image: "tex.png" },
+            { value: "0da35800-0DA52FEF,4360", label: "dragunov 2", image: "tex.png" },
+            { value: "0da53000-0DA657EF,436c", label: "dragunov 3", image: "tex.png" },
+            { value: "0da65800-0DC367EF,4378", label: "dragunov 4", image: "tex.png" },
+            { value: "0dc36800-0DF09FEF,4384", label: "dragunov 5", image: "tex.png" },
+            { value: "0df0a000-0DF0B7EF,4390", label: "dragunov 6", image: "tex.png" },
+            { value: "0df0b800-0DF24FEF,43a8", label: "bob 1", image: "tex.png" },
+            { value: "0df25000-0DF427EF,43b4", label: "bob 2", image: "tex.png" },
+            { value: "0df42800-0DF54FEF,43c0", label: "bob 3", image: "tex.png" },
+            { value: "0df55000-0E125FEF,43cc", label: "bob 4", image: "tex.png" },
+            { value: "0e126000-0E3F97EF,43d8", label: "bob 5", image: "tex.png" },
+            { value: "0e3f9800-0E3FAFEF,43e4", label: "bob 6", image: "tex.png" },
+            { value: "0e3fb000-0E4147EF,43fc", label: "zafina 1", image: "tex.png" },
+            { value: "0e414800-0E431FEF,4408", label: "zafina 2", image: "tex.png" },
+            { value: "0e432000-0E4447EF,4414", label: "zafina 3", image: "tex.png" },
+            { value: "0e444800-0E6157EF,4420", label: "zafina 4", image: "tex.png" },
+            { value: "0e615800-0E8E8FEF,442c", label: "zafina 5", image: "tex.png" },
+            { value: "0e8e9000-0E8EA7EF,4438", label: "zafina 6", image: "tex.png" },
+            { value: "0e8ea800-0E903FEF,4450", label: "miguel 1", image: "tex.png" },
+            { value: "0e904000-0E9217EF,445c", label: "miguel 2", image: "tex.png" },
+            { value: "0e921800-0E933FEF,4468", label: "miguel 3", image: "tex.png" },
+            { value: "0e934000-0EB04FEF,4474", label: "miguel 4", image: "tex.png" },
+            { value: "0eb05000-0EDD87EF,4480", label: "miguel 5", image: "tex.png" },
+            { value: "0edd8800-0EDD9FEF,448c", label: "miguel 6", image: "tex.png" },
+            { value: "0edda000-0EDF37EF,44a4", label: "leo 1", image: "tex.png" },
+            { value: "0edf3800-0EE10FEF,44b0", label: "leo 2", image: "tex.png" },
+            { value: "0ee11000-0EE237EF,44bc", label: "leo 3", image: "tex.png" },
+            { value: "0ee23800-0EFF47EF,44c8", label: "leo 4", image: "tex.png" },
+            { value: "0eff4800-0F2C7FEF,44d4", label: "leo 5", image: "tex.png" },
+            { value: "0f2c8000-0F2C97EF,44e0", label: "leo 6", image: "tex.png" },
+            { value: "0f2c9800-0F2E2FEF,44f8", label: "azazel 1", image: "tex.png" },
+            { value: "0f2e3000-0F3007EF,4504", label: "azazel 2", image: "tex.png" },
+            { value: "0f300800-0F312FEF,4510", label: "azazel 3", image: "tex.png" },
+            { value: "0f313000-0F4E3FEF,451c", label: "azazel 4", image: "tex.png" },
+            { value: "0f4e4000-0F7B77EF,4528", label: "azazel 5", image: "tex.png" },
+            { value: "0f7b7800-0F7B8FEF,4534", label: "azazel 6", image: "tex.png" },
+            { value: "0f7b9000-0F7D27EF,454c", label: "lars 1", image: "tex.png" },
+            { value: "0f7d2800-0F7EFFEF,4558", label: "lars 2", image: "tex.png" },
+            { value: "0f7f0000-0F8027EF,4564", label: "lars 3", image: "tex.png" },
+            { value: "0f802800-0F9D37EF,4570", label: "lars 4", image: "tex.png" },
+            { value: "0f9d3800-0FCA6FEF,457c", label: "lars 5", image: "tex.png" },
+            { value: "0fca7000-0FCA87EF,4588", label: "lars 6", image: "tex.png" },
+            { value: "0fca8800-0FCC1FEF,45a0", label: "alisa 1", image: "tex.png" },
+            { value: "0fcc2000-0FCDF7EF,45ac", label: "alisa 2", image: "tex.png" },
+            { value: "0fcdf800-0FCF1FEF,45b8", label: "alisa 3", image: "tex.png" },
+            { value: "0fcf2000-0FEC2FEF,45c4", label: "alisa 4", image: "tex.png" },
+            { value: "0fec3000-101967EF,45d0", label: "alisa 5", image: "tex.png" },
+            { value: "10196800-10197FEF,45dc", label: "alisa 6", image: "tex.png" },
+            { value: "10198000-101B17EF,45f4", label: "nancy 1", image: "tex.png" },
+            { value: "101b1800-101CEFEF,4600", label: "nancy 2", image: "tex.png" },
+            { value: "101cf000-101E17EF,460c", label: "nancy 3", image: "tex.png" },
+            { value: "101e1800-103B27EF,4618", label: "nancy 4", image: "tex.png" },
+            { value: "103b2800-10685FEF,4624", label: "nancy 5", image: "tex.png" },
+            { value: "10686000-106877EF,4630", label: "nancy 6", image: "tex.png" },
+            
+            
+            
+                ],
+                "6": [
+            { value: "10919000-109CE7EF,4b7c", label: "Mystical Forest 1", image: "tex.png" },
+            { value: "109ce800-10AAEFEF,4b88", label: "Mystical Forest 2", image: "001.jpg" },
+            { value: "10aaf000-0001EEA0", label: "Mystical Forest 3", image: "tex.png" },
+            { value: "10ace000-0000D530", label: "Mystical Forest 4", image: "tex.png" },
+            { value: "10adb800-10B90FEF,4bd0", label: "High Roller s Club 1", image: "tex.png" },
+            { value: "10b91000-10C717EF,4bdc", label: "High Roller s Club 2", image: "002.jpg" },
+            { value: "10c71800-00018CB0", label: "High Roller s Club 3", image: "tex.png" },
+            { value: "10c8a800-0000CD40", label: "High Roller s Club 4", image: "tex.png" },
+            { value: "10c97800-10D4CFEF,4c24", label: "Temple Grounds 1", image: "tex.png" },
+            { value: "10d4d000-10E2D7EF,4c30", label: "Temple Grounds 2", image: "003.jpg" },
+            { value: "10e2d800-0000F410", label: "Temple Grounds 3", image: "tex.png" },
+            { value: "10e3d000-00012520", label: "Temple Grounds 4", image: "tex.png" },
+            { value: "10e4f800-10F04FEF,4c78", label: "Cemetery 1", image: "tex.png" },
+            { value: "10f05000-10FE57EF,4c84", label: "Cemetery 2", image: "004.jpg" },
+            { value: "10fe5800-0000CFB0", label: "Cemetery 3", image: "tex.png" },
+            { value: "10ff2800-0001FA20", label: "Cemetery 4", image: "tex.png" },
+            { value: "11012800-110C7FEF,4ccc", label: "City After Dark 1", image: "tex.png" },
+            { value: "110c8000-111A87EF,4cd8", label: "City After Dark 2", image: "005.jpg" },
+            { value: "111a8800-0000DE90", label: "City After Dark 3", image: "tex.png" },
+            { value: "111b6800-0000E0B0", label: "City After Dark 4", image: "tex.png" },
+            { value: "111c5000-1127A7EF,4d20", label: "Fiesta Del Tomate 1", image: "tex.png" },
+            { value: "1127a800-1135AFEF,4d2c", label: "Fiesta Del Tomate 2", image: "006.jpg" },
+            { value: "1135b000-0000ECF0", label: "Fiesta Del Tomate 3", image: "tex.png" },
+            { value: "1136a000-00007B40", label: "Fiesta Del Tomate 4", image: "tex.png" },
+            { value: "11372000-114277EF,4d74", label: "Rustic Asia 1", image: "tex.png" },
+            { value: "11427800-11507FEF,4d80", label: "Rustic Asia 2", image: "007.jpg" },
+            { value: "11508000-0001DDB0", label: "Rustic Asia 3", image: "tex.png" },
+            { value: "11526000-00006810", label: "Rustic Asia 4", image: "tex.png" },
+            { value: "1152d000-115E27EF,4dc8", label: "Manji Valley 1", image: "tex.png" },
+            { value: "115e2800-116C2FEF,4dd4", label: "Manji Valley 2", image: "008.jpg" },
+            { value: "116c3000-00017F40", label: "Manji Valley 3", image: "tex.png" },
+            { value: "116db000-00000800", label: "Manji Valley 4", image: "tex.png" },
+            { value: "116db800-11790FEF,4e1c", label: "Noh Theater 1", image: "tex.png" },
+            { value: "11791000-118717EF,4e28", label: "Noh Theater 2", image: "009.jpg" },
+            { value: "11871800-00004C00", label: "Noh Theater 3", image: "tex.png" },
+            { value: "11876800-00028090", label: "Noh Theater 4", image: "tex.png" },
+            { value: "1189f000-119547EF,4e70", label: "Fallen Colony 1", image: "tex.png" },
+            { value: "11954800-11A34FEF,4e7c", label: "Fallen Colony 2", image: "010.jpg" },
+            { value: "11a35000-0000EA10", label: "Fallen Colony 3", image: "tex.png" },
+            { value: "11a44000-0001E680", label: "Fallen Colony 4", image: "tex.png" },
+            { value: "11a62800-11B17FEF,4ec4", label: "Urban War Zone 1", image: "tex.png" },
+            { value: "11b18000-11BF87EF,4ed0", label: "Urban War Zone 2", image: "011.jpg" },
+            { value: "11bf8800-000048C0", label: "Urban War Zone 3", image: "tex.png" },
+            { value: "11bfd800-000265C0", label: "Urban War Zone 4", image: "tex.png" },
+            { value: "11c24000-11CD97EF,4f18", label: "Gargoyle s Perch 1", image: "tex.png" },
+            { value: "11cd9800-11DB9FEF,4f24", label: "Gargoyle s Perch 2", image: "012.jpg" },
+            { value: "11dba000-0000BB40", label: "Gargoyle s Perch 3", image: "tex.png" },
+            { value: "11dc6000-000190F0", label: "Gargoyle s Perch 4", image: "tex.png" },
+            { value: "11ddf800-11E94FEF,4f6c", label: "Nancy-MI847J 1", image: "tex.png" },
+            { value: "11e95000-11F757EF,4f78", label: "Nancy-MI847J 2", image: "013.jpg" },
+            { value: "11f75800-00012DA0", label: "Nancy-MI847J 3", image: "tex.png" },
+            { value: "11f88800-00019730", label: "Nancy-MI847J 4", image: "tex.png" },
+            { value: "11fa2000-120577EF,4fc0", label: "azazel 1", image: "tex.png" },
+            { value: "12057800-12137FEF,4fcc", label: "azazel 2", image: "014.jpg" },
+            { value: "12138000-00008000", label: "azazel 3", image: "tex.png" },
+            { value: "12140000-000190F0", label: "azazel 4", image: "tex.png" },
+            { value: "1231b800-123D0FEF,5068", label: "blak 1", image: "tex.png" },
+            { value: "123d1000-124B17EF,5074", label: "blak 2", image: "015.jpg" },
+            { value: "12159800-1220EFEF,50bc", label: "Lightning Storm 1", image: "tex.png" },
+            { value: "1220f000-122EF7EF,50c8", label: "Lightning Storm 2", image: "016.jpg" },
+            { value: "122ef800-00004A50", label: "Lightning Storm 3", image: "tex.png" },
+            { value: "122f4800-00026CD0", label: "Lightning Storm 4", image: "tex.png" },
+            { value: "124b1800-12566FEF,5110", label: "Tunnel Disaster 1", image: "tex.png" },
+            { value: "12567000-126477EF,511c", label: "Tunnel Disaster 2", image: "017.jpg" },
+            { value: "12647800-0000FAB0", label: "Tunnel Disaster 3", image: "tex.png" },
+            { value: "12657800-00019800", label: "Tunnel Disaster 4", image: "tex.png" },
+            { value: "12671000-127267EF,5164", label: "Electric Fountain 1", image: "tex.png" },
+            { value: "12726800-12806FEF,5170", label: "Electric Fountain 2", image: "018.jpg" },
+            { value: "12807000-00013900", label: "Electric Fountain 3", image: "tex.png" },
+            { value: "1281b000-00019040", label: "Electric Fountain 4", image: "tex.png" },
+            { value: "12834800-128E9FEF,51b8", label: "Anger of the Earth 1", image: "tex.png" },
+            { value: "128ea000-129CA7EF,51c4", label: "Anger of the Earth 2", image: "019.jpg" },
+            { value: "129ca800-00007540", label: "Anger of the Earth 3", image: "tex.png" },
+            { value: "129d2000-00024A00", label: "Anger of the Earth 4", image: "tex.png" },
+            { value: "129f7000-12AAC7EF,520c", label: "Hidden Retreat 1", image: "tex.png" },
+            { value: "12aac800-12B8CFEF,5218", label: "Hidden Retreat 2", image: "020.jpg" },
+            { value: "12b8d000-00009EE0", label: "Hidden Retreat 3", image: "tex.png" },
+            { value: "12b97000-000090C0", label: "Hidden Retreat 4", image: "tex.png" },
+            { value: "12d36800-12DEBFEF,5404", label: "Practice on 1", image: "tex.png" },
+            { value: "12dec000-12ECC7EF,5410", label: "Practice on 2", image: "021.jpg" },
+            { value: "12ecc800-00000820", label: "Practice on 3", image: "tex.png" },
+            { value: "12ecd800-000090C0", label: "Practice on 4", image: "tex.png" },
+            { value: "12ed7000-12F8C7EF,5458", label: "Practice of 1", image: "tex.png" },
+            { value: "12f8c800-1306CFEF,5464", label: "Practice of 2", image: "022.jpg" },
+            { value: "1306d000-00000820", label: "Practice of 3", image: "tex.png" },
+            { value: "1306e000-000090C0", label: "Practice of 4", image: "tex.png" },
+            { value: "13077800-1312CFEF,54ac", label: "Gym 1", image: "tex.png" },
+            { value: "1312d000-1320D7EF,54b8", label: "Gym 2", image: "023.jpg" },
+            { value: "1320d800-00002F30", label: "Gym 3", image: "tex.png" },
+            { value: "13210800-00009880", label: "Gym 4", image: "tex.png" },
+            { value: "1321a800-132CFFEF,5500", label: "Hidden Retreat 2 1", image: "tex.png" },
+            { value: "132d0000-133B07EF,550c", label: "Hidden Retreat 2 2", image: "024.jpg" },
+            { value: "133b0800-00003E10", label: "Hidden Retreat 2 3", image: "tex.png" },
+            { value: "133b4800-000090C0", label: "Hidden Retreat 2 4", image: "tex.png" },
+            { value: "133be000-134737EF,5554", label: "Waterfall 1", image: "tex.png" },
+            { value: "13473800-13553FEF,5560", label: "Waterfall 2", image: "025.jpg" },
+            { value: "13554000-0000B9D0", label: "Waterfall 3", image: "tex.png" },
+            { value: "13560000-00011CA0", label: "Waterfall 4", image: "tex.png" },
+            { value: "13572000-136277EF,55a8", label: "Temple 1", image: "tex.png" },
+            { value: "13627800-13707FEF,55b4", label: "Temple 2", image: "026.jpg" },
+            { value: "13708000-00002BE0", label: "Temple 3", image: "tex.png" },
+            { value: "1370b000-000284C0", label: "Temple 4", image: "tex.png" },
+            
+            
+            
+            
+                ],
+                "7": [
+            { value: "13627800-13707FEF,247c", label: "Xiaoyu 1 vag", image: "tex.png" },
+            { value: "13627800-13707FEF,5d88", label: "Xiaoyu 2 intro AT3", image: "tex.png" },
+            { value: "13627800-13707FEF,60ac", label: "Xiaoyu 3 Final AT3", image: "tex.png" },
+            
+            
+            { value: "13627800-13707FEF,2488", label: "christie", image: "tex.png" },
+            
+            { value: "136-EF,5e30", label: "Raven 2 intro AT3", image: "tex.png" },
+                    
+                    
+                ]
+            };
+
+            const loadAddressesByCategory = (category) => {
+                selectAddresses.innerHTML = "";
+                addresses[category].forEach(addr => {
+                    const option = document.createElement("option");
+                    option.value = addr.value;
+                    option.textContent = addr.label;
+                    option.dataset.image = addr.image; // Asignar la ruta de la imagen
+                    selectAddresses.appendChild(option);
+                });
+            };
+
+            loadAddressesByCategory("1");
+
+            selectCategory.addEventListener("change", (e) => {
+                loadAddressesByCategory(e.target.value);
+            });
+
+            const readFile = file => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsArrayBuffer(file);
+            });
+
+            const hexStringToBytes = hex => new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+
+            const searchHexSequence = async (buffer, sequence) => {
+                const hexBytes = hexStringToBytes(sequence);
+                const bufferView = new DataView(buffer);
+
+                for (let i = 0; i <= buffer.byteLength - hexBytes.length; i++) {
+                    let found = true;
+                    for (let j = 0; j < hexBytes.length; j++) {
+                        if (bufferView.getUint8(i + j) !== hexBytes[j]) {
+                            found = false;
+                            break;
+                        }
+                    }
+                    if (found) return i;
+                }
+                return -1;
+            };
+
+            const searchSequence = async () => {
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
+
+                if (!file1) {
+                    alert("Selecciona el archivo base.");
+                    return;
+                }
+
+                // Buscar la secuencia permanente
+                const foundAt1 = await searchHexSequence(file1, fixedSearchSequence.replace(/ /g, "").toLowerCase());
+                if (foundAt1 !== -1) {
+                    resultDiv.textContent = `La secuencia 1 se encuentra en la posición: ${foundAt1.toString(16).toUpperCase()}`;
+                    lastFoundValue1 = foundAt1; // Almacena la posición de la primera secuencia
+                } else {
+                    resultDiv.textContent = "La secuencia 1 no se encontró.";
+                }
+
+                // Buscar la nueva secuencia fija
+                const foundAt2 = await searchHexSequence(file1, newSearchSequence.replace(/ /g, "").toLowerCase());
+                if (foundAt2 !== -1) {
+                    resultDiv.textContent += `\nLa secuencia 2 se encuentra en la posición: ${foundAt2.toString(16).toUpperCase()}`;
+                    lastFoundValue2 = foundAt2; // Almacena la posición de la segunda secuencia
+                } else {
+                    resultDiv.textContent += "\nLa secuencia 2 no se encontró.";
+                }
+            };
+
+            // Búsqueda automática al seleccionar el archivo base
+            file1Input.addEventListener("change", searchSequence);
+
+            const sumPositions = () => {
+                if (lastFoundValue1 === 0 || lastFoundValue2 === 0) {
+                    alert("Primero debes seleccionar un archivo base para buscar las secuencias.");
+                    return;
+                }
+
+                // Validar que los valores de las direcciones sean válidos
+                const [startHex, endHex] = rangeInput.value.split("-");
+                const sizeAddr = sizeAddressInput.value;
+
+                if (!startHex || !endHex || !sizeAddr) {
+                    alert("Completa los campos de dirección inicio-final y tamaño.");
+                    return;
+                }
+
+                const start = parseInt(startHex, 16);
+                const end = parseInt(endHex, 16);
+                const size = parseInt(sizeAddr, 16);
+
+                if (isNaN(start) || isNaN(end) || isNaN(size)) {
+                    alert("Los valores de las direcciones no son válidos.");
+                    return;
+                }
+
+                // Sumar las posiciones encontradas a las entradas de inicio, final y tamaño
+                rangeInput.value = `${(start + lastFoundValue1).toString(16).toUpperCase()}-${(end + lastFoundValue1).toString(16).toUpperCase()}`;
+                sizeAddressInput.value = (size + lastFoundValue2).toString(16).toUpperCase();
+
+                resultDiv.textContent += `\nPosiciones sumadas a las entradas.`;
+            };
+
+            // Suma automática al cambiar la dirección
+            selectAddresses.addEventListener("change", () => {
+                const selectedOption = selectAddresses.options[selectAddresses.selectedIndex];
+                const [range, size] = selectedOption.value.split(",");
+                rangeInput.value = range;
+                sizeAddressInput.value = size;
+
+                // Cargar la imagen de referencia
+                const imagePath = selectedOption.dataset.image;
+                if (imagePath) {
+                    imageReference.src = imagePath;
+                    imageReference.style.display = "block";
+                } else {
+                    imageReference.src = "";
+                    imageReference.style.display = "none";
+                }
+
+                sumPositions(); // Sumar automáticamente
+            });
+
+            rangeInput.addEventListener("input", sumPositions);
+            sizeAddressInput.addEventListener("input", sumPositions);
+
+            const replaceSequence = async () => {
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
+                const file2 = await readFile(file2Input.files[0]);
+                const range = rangeInput.value;
+
+                if (!file1 || !file2 || !range) {
+                    alert("Selecciona ambos archivos y completa el rango de reemplazo.");
+                    return;
+                }
+
+                const baseView = new DataView(file1);
+                const replacementView = new DataView(file2);
+                const [startHex, endHex] = range.split("-");
+                const start = parseInt(startHex, 16);
+                const end = parseInt(endHex, 16);
+                const length = end - start + 1;
+
+                for (let i = 0; i < length; i++) {
+                    baseView.setUint8(start + i, i < replacementView.byteLength ? replacementView.getUint8(i) : 0x00);
+                }
+
+                const foundNewAt = await searchHexSequence(file1, newSearchSequence.replace(/ /g, "").toLowerCase());
+                if (foundNewAt !== -1) {
+                    const sizeAddr = parseInt(sizeAddressInput.value, 16);
+                    const size = replacementView.byteLength;
+                    const sizeInHex = size.toString(16).padStart(8, '0');
+
+                    for (let i = 0; i < 4; i++) {
+                        baseView.setUint8(sizeAddr + i, parseInt(sizeInHex.substr((3 - i) * 2, 2), 16));
+                    }
+                }
+
+                replaceCounter++;
+                modifiedFileBuffer = file1;
+                resultDiv.textContent = `Reemplazo completado. Total reemplazos realizados: ${replaceCounter}`;
+            };
+
+            const downloadModifiedFile = () => {
+                if (!modifiedFileBuffer) {
+                    alert("Primero debes reemplazar el archivo.");
+                    return;
+                }
+
+                const originalFileName = file1Input.files[0].name;
+                const modifiedFileName = originalFileName.replace(/\.[^/.]+$/, "_modificado.iso");
+
+                const modifiedFile = new Blob([modifiedFileBuffer], { type: "application/octet-stream" });
+                const url = URL.createObjectURL(modifiedFile);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = modifiedFileName;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const sanitizeFileName = (name) => {
+                return name.replace(/[^a-zA-Z0-9-_]/g, "_");
+            };
+
+            const trimTrailingZeros = (buffer) => {
+                const view = new Uint8Array(buffer);
+                let endIndex = view.length;
+                while (endIndex > 0 && view[endIndex - 1] === 0x00) {
+                    endIndex--;
+                }
+                return buffer.slice(0, endIndex);
+            };
+
+            const extractAndDownload = async () => {
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
+                const range = rangeInput.value;
+                const selectedOption = selectAddresses.options[selectAddresses.selectedIndex];
+
+                if (!file1 || !range) {
+                    alert("Selecciona el archivo base y completa el rango de extracción.");
+                    return;
+                }
+
+                const [startHex, endHex] = range.split("-");
+                const start = parseInt(startHex, 16);
+                const end = parseInt(endHex, 16);
+                const length = end - start + 1;
+
+                let extractedBuffer = file1.slice(start, start + length);
+                extractedBuffer = trimTrailingZeros(extractedBuffer);
+
+                let fileName = sanitizeFileName(selectedOption.textContent) + ".bin";
+
+                const extractedFile = new Blob([extractedBuffer], { type: "application/octet-stream" });
+                const url = URL.createObjectURL(extractedFile);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            document.getElementById("btn-replace").addEventListener("click", replaceSequence);
+            document.getElementById("btn-download").addEventListener("click", downloadModifiedFile);
+            document.getElementById("btn-extract-download").addEventListener("click", extractAndDownload);
+
+            const searchAddress = () => {
+                const searchTerm = addressSearchInput.value.toLowerCase();
+                const options = selectAddresses.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].textContent.toLowerCase().includes(searchTerm)) {
+                        selectAddresses.selectedIndex = i;
+                        selectAddresses.dispatchEvent(new Event('change'));
+                        break;
+                    }
+                }
+            };
+
+            addressSearchInput.addEventListener('input', searchAddress);
+        });
+    </script>
+</body>
+</html>
