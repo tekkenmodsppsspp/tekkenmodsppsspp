@@ -17,9 +17,14 @@ Bienvenido a **Tekken 7 Vanilla PSP**, un proyecto para mejorar la experiencia d
 2. Copia los archivos en la carpeta del juego en PSP o PPSSPP.  
 3. Disfruta del mod con gráficos mejorados.  
 
+## 🌍 Página Web Oficial  
+Accede a la web para más información y descargas:  
+🔗 **[Tekken Mods PPSSPP](https://tekkenmodsppsspp.github.io/tekkenmodsppsspp/)**  
+
 ## 📢 Contacto y Comunidad  
 Únete a la comunidad para más mods y actualizaciones:  
 📌 **Página oficial:** [TekkenModsPPSSPP](https://tekkenmodsppsspp.com)  
+📌 **GitHub Pages:** [Tekken Mods PPSSPP](https://tekkenmodsppsspp.github.io/tekkenmodsppsspp/)  
 📌 **Discord:** [Enlace a Discord]  
 📌 **YouTube:** [Luis F. - Mods Tekken PSP](https://youtube.com/@luisf.7351?si=vPf400T7HytZzgrG)  
 
