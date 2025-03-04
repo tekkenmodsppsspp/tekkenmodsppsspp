@@ -21,6 +21,7 @@ Bienvenido a **Tekken 7 Vanilla PSP**, un proyecto para mejorar la experiencia d
 Únete a la comunidad para más mods y actualizaciones:  
 📌 **Página oficial:** [TekkenModsPPSSPP](https://tekkenmodsppsspp.com)  
 📌 **Discord:** [Enlace a Discord]  
+📌 **YouTube:** [Luis F. - Mods Tekken PSP](https://youtube.com/@luisf.7351?si=vPf400T7HytZzgrG)  
 
 ---
 
@@ -31,4 +32,4 @@ Bienvenido a **Tekken 7 Vanilla PSP**, un proyecto para mejorar la experiencia d
 
 Si ya mejoraste tu README, Google puede tardar unos días en indexarlo. También puedes compartir tu repositorio en **Reddit, Discord o foros de PSP** para acelerar el proceso.  
 
-🔹 **Si necesitas más ayuda, dime y lo mejoramos juntos.**
+🔹 **Si necesitas más ayuda, dime y lo mejoramos juntos.**  
