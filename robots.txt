@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tekkenmodsppsspp.github.io/tekkenmodsppsspp/sitemap.xml
