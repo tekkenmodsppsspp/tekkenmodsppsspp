@@ -5,66 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Optimización de Archivos Grandes</title>
     <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #1e1e2e;
-    color: #fff;
-    text-align: center;
-}
+        body {
+            font-family: Arial, sans-serif;
+            background: #1e1e2e;
+            color: #fff;
+            text-align: center;
+        }
 
-header {
-    background: #282a36;
-    padding: 1px;
-    font-size: 10px;
-    font-weight: bold;
-    border-bottom: 3px solid #ff79c6;
-}
+        header {
+            background: #282a36;
+            padding: 1px;
+            font-size: 10px;
+            font-weight: bold;
+            border-bottom: 3px solid #ff79c6;
+        }
 
-main {
-    max-width: 300px;
-    margin: 2px auto;
-    padding: 20px;
-    background: #2a2e3b;
-    border-radius: 8px;
-}
+        main {
+            max-width: 300px;
+            margin: 2px auto;
+            padding: 20px;
+            background: #2a2e3b;
+            border-radius: 8px;
+        }
 
-label, input, select, button {
-    width: 100%;
-    margin: 1px 0;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-}
+        label, input, select, button {
+            width: 100%;
+            margin: 1px 0;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+        }
 
-input, select {
-    background: #3a4d6a;
-    color: white;
-}
+        input, select {
+            background: #3a4d6a;
+            color: white;
+        }
 
-button {
-    cursor: pointer;
-    font-weight: bold;
-}
+        button {
+            cursor: pointer;
+            font-weight: bold;
+        }
 
-#btn-replace { background: #ff5555; color: white; }
-#btn-download { background: #50fa7b; color: black; }
-#btn-extract-download { background: #bd93f9; color: white; }
+        #btn-replace { background: #ff5555; color: white; }
+        #btn-download { background: #50fa7b; color: black; }
+        #btn-extract-download { background: #bd93f9; color: white; }
 
-button:hover {
-    opacity: 0.8;
-}
-#image-reference {
-    max-width: 100%; /* Para que no se salga del contenedor */
-    height: auto; /* Mantiene la proporción */
-    display: block; /* Centra la imagen */
-    margin: 10px auto;
-    border-radius: 5px; /* Bordes redondeados */
-    border: 2px solid #ff79c6; /* Borde para resaltar */
-}
+        button:hover {
+            opacity: 0.8;
+        }
+        #image-reference {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px auto;
+            border-radius: 5px;
+            border: 2px solid #ff79c6;
+        }
 
+        .progress-container {
+            width: 100%;
+            background-color: #3a4d6a;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
 
+        .progress-bar {
+            height: 20px;
+            border-radius: 5px;
+            background-color: #50fa7b;
+            width: 0%;
+            transition: width 0.3s;
+            text-align: center;
+            line-height: 20px;
+            color: black;
+            font-weight: bold;
+        }
 
-
+        .notification {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #50fa7b;
+            color: black;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -72,11 +97,17 @@ button:hover {
         <h1>Luis F./Tool V 6.8</h1>
     </header>
     <main>
-        <label for="file1">Archivo base ISO: 💿</label>
+        <label for="file1">Archivo base ISO: 🛒</label>
         <input type="file" id="file1" accept=".txt, .bin, .hex, .obj">
+        <div id="file1-progress" class="progress-container">
+            <div id="file1-progress-bar" class="progress-bar">0%</div>
+        </div>
 
-        <label for="file2">Archivo de reemplazo bin: 📁</label>
+        <label for="file2">Archivo de reemplazo bin: 🛗</label>
         <input type="file" id="file2" accept=".txt, .bin, .hex, .obj">
+        <div id="file2-progress" class="progress-container">
+            <div id="file2-progress-bar" class="progress-bar">0%</div>
+        </div>
 
         <label for="range">Dirección inicio-final:</label>
         <input type="text" id="range" placeholder="Ej: 10-5">
@@ -104,9 +135,21 @@ button:hover {
             <input type="text" id="address-search" placeholder="Ingresa parte de la dirección...">
         </div>
 
+        <div id="search-progress" class="progress-container">
+            <div id="search-progress-bar" class="progress-bar">0%</div>
+        </div>
+
         <button id="btn-replace">Reemplazar</button>
+        <div id="replace-progress" class="progress-container">
+            <div id="replace-progress-bar" class="progress-bar">0%</div>
+        </div>
+
         <button id="btn-download">Descargar Modificado</button>
-        <button id="btn-extract-download">Extraer.bin 📥</button>
+        <button id="btn-extract-download">Extraer.bin 🛐</button>
+
+        <div id="success-notification" class="notification">
+            Operación completada al 100%!
+        </div>
 
         <div id="result"></div>
         <img id="image-reference" src="" alt="Imagen de referencia" style="display:none;">
@@ -123,14 +166,25 @@ button:hover {
             const selectCategory = document.getElementById("select-category");
             const imageReference = document.getElementById("image-reference");
             const addressSearchInput = document.getElementById("address-search");
+            
+            // Elementos de progreso
+            const file1Progress = document.getElementById("file1-progress");
+            const file1ProgressBar = document.getElementById("file1-progress-bar");
+            const file2Progress = document.getElementById("file2-progress");
+            const file2ProgressBar = document.getElementById("file2-progress-bar");
+            const searchProgress = document.getElementById("search-progress");
+            const searchProgressBar = document.getElementById("search-progress-bar");
+            const replaceProgress = document.getElementById("replace-progress");
+            const replaceProgressBar = document.getElementById("replace-progress-bar");
+            const successNotification = document.getElementById("success-notification");
 
             let modifiedFileBuffer = null;
             let replaceCounter = 0;
-            let lastFoundValue1 = 0; // Almacena la posición de la primera secuencia
-            let lastFoundValue2 = 0; // Almacena la posición de la segunda secuencia
+            let lastFoundValue1 = 0;
+            let lastFoundValue2 = 0;
 
             const newSearchSequence = "01 00 00 00 4c 17 22 00 67 fe 39 04";
-            const fixedSearchSequence = "c5 60 70 f8"; // Secuencia hexadecimal permanente
+            const fixedSearchSequence = "c5 60 70 f8";
 
             const addresses = {
                 "1": [
@@ -574,6 +628,8 @@ button:hover {
             { value: "136-EF,5e30", label: "Raven 2 intro AT3", image: "tex.png" },
                     
                     
+                    
+                    
                 ]
             };
 
@@ -583,7 +639,7 @@ button:hover {
                     const option = document.createElement("option");
                     option.value = addr.value;
                     option.textContent = addr.label;
-                    option.dataset.image = addr.image; // Asignar la ruta de la imagen
+                    option.dataset.image = addr.image;
                     selectAddresses.appendChild(option);
                 });
             };
@@ -594,20 +650,54 @@ button:hover {
                 loadAddressesByCategory(e.target.value);
             });
 
-            const readFile = file => new Promise((resolve, reject) => {
+            const readFile = (file, progressBar, progressContainer) => new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(reader.error);
+                
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percentLoaded = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percentLoaded + '%';
+                        progressBar.textContent = percentLoaded + '%';
+                    }
+                };
+                
+                reader.onload = () => {
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        showSuccessNotification();
+                    }, 500);
+                    resolve(reader.result);
+                };
+                
+                reader.onerror = () => {
+                    progressContainer.style.display = 'none';
+                    reject(reader.error);
+                };
+                
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
                 reader.readAsArrayBuffer(file);
             });
 
+            const showSuccessNotification = () => {
+                successNotification.style.display = 'block';
+                setTimeout(() => {
+                    successNotification.style.display = 'none';
+                }, 3000);
+            };
+
             const hexStringToBytes = hex => new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
 
-            const searchHexSequence = async (buffer, sequence) => {
+            const searchHexSequence = async (buffer, sequence, progressCallback) => {
                 const hexBytes = hexStringToBytes(sequence);
                 const bufferView = new DataView(buffer);
+                const totalBytes = buffer.byteLength - hexBytes.length;
+                const updateInterval = Math.floor(totalBytes / 100);
 
-                for (let i = 0; i <= buffer.byteLength - hexBytes.length; i++) {
+                for (let i = 0; i <= totalBytes; i++) {
                     let found = true;
                     for (let j = 0; j < hexBytes.length; j++) {
                         if (bufferView.getUint8(i + j) !== hexBytes[j]) {
@@ -615,39 +705,64 @@ button:hover {
                             break;
                         }
                     }
-                    if (found) return i;
+                    
+                    if (i % updateInterval === 0 && progressCallback) {
+                        const progress = Math.min(100, Math.floor((i / totalBytes) * 100));
+                        progressCallback(progress);
+                    }
+                    
+                    if (found) {
+                        if (progressCallback) progressCallback(100);
+                        return i;
+                    }
                 }
+                if (progressCallback) progressCallback(100);
                 return -1;
             };
 
+            const updateSearchProgress = (progress) => {
+                searchProgressBar.style.width = progress + '%';
+                searchProgressBar.textContent = progress + '%';
+                if (progress === 100) {
+                    setTimeout(() => {
+                        searchProgress.style.display = 'none';
+                        showSuccessNotification();
+                    }, 500);
+                }
+            };
+
             const searchSequence = async () => {
-                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
+                searchProgress.style.display = 'block';
+                searchProgressBar.style.width = '0%';
+                searchProgressBar.textContent = '0%';
+
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0], file1ProgressBar, file1Progress);
 
                 if (!file1) {
                     alert("Selecciona el archivo base.");
+                    searchProgress.style.display = 'none';
                     return;
                 }
 
                 // Buscar la secuencia permanente
-                const foundAt1 = await searchHexSequence(file1, fixedSearchSequence.replace(/ /g, "").toLowerCase());
+                const foundAt1 = await searchHexSequence(file1, fixedSearchSequence.replace(/ /g, "").toLowerCase(), updateSearchProgress);
                 if (foundAt1 !== -1) {
                     resultDiv.textContent = `La secuencia 1 se encuentra en la posición: ${foundAt1.toString(16).toUpperCase()}`;
-                    lastFoundValue1 = foundAt1; // Almacena la posición de la primera secuencia
+                    lastFoundValue1 = foundAt1;
                 } else {
                     resultDiv.textContent = "La secuencia 1 no se encontró.";
                 }
 
                 // Buscar la nueva secuencia fija
-                const foundAt2 = await searchHexSequence(file1, newSearchSequence.replace(/ /g, "").toLowerCase());
+                const foundAt2 = await searchHexSequence(file1, newSearchSequence.replace(/ /g, "").toLowerCase(), updateSearchProgress);
                 if (foundAt2 !== -1) {
                     resultDiv.textContent += `\nLa secuencia 2 se encuentra en la posición: ${foundAt2.toString(16).toUpperCase()}`;
-                    lastFoundValue2 = foundAt2; // Almacena la posición de la segunda secuencia
+                    lastFoundValue2 = foundAt2;
                 } else {
                     resultDiv.textContent += "\nLa secuencia 2 no se encontró.";
                 }
             };
 
-            // Búsqueda automática al seleccionar el archivo base
             file1Input.addEventListener("change", searchSequence);
 
             const sumPositions = () => {
@@ -656,7 +771,6 @@ button:hover {
                     return;
                 }
 
-                // Validar que los valores de las direcciones sean válidos
                 const [startHex, endHex] = rangeInput.value.split("-");
                 const sizeAddr = sizeAddressInput.value;
 
@@ -674,21 +788,18 @@ button:hover {
                     return;
                 }
 
-                // Sumar las posiciones encontradas a las entradas de inicio, final y tamaño
                 rangeInput.value = `${(start + lastFoundValue1).toString(16).toUpperCase()}-${(end + lastFoundValue1).toString(16).toUpperCase()}`;
                 sizeAddressInput.value = (size + lastFoundValue2).toString(16).toUpperCase();
 
                 resultDiv.textContent += `\nPosiciones sumadas a las entradas.`;
             };
 
-            // Suma automática al cambiar la dirección
             selectAddresses.addEventListener("change", () => {
                 const selectedOption = selectAddresses.options[selectAddresses.selectedIndex];
                 const [range, size] = selectedOption.value.split(",");
                 rangeInput.value = range;
                 sizeAddressInput.value = size;
 
-                // Cargar la imagen de referencia
                 const imagePath = selectedOption.dataset.image;
                 if (imagePath) {
                     imageReference.src = imagePath;
@@ -698,19 +809,35 @@ button:hover {
                     imageReference.style.display = "none";
                 }
 
-                sumPositions(); // Sumar automáticamente
+                sumPositions();
             });
 
             rangeInput.addEventListener("input", sumPositions);
             sizeAddressInput.addEventListener("input", sumPositions);
 
+            const updateReplaceProgress = (progress) => {
+                replaceProgressBar.style.width = progress + '%';
+                replaceProgressBar.textContent = progress + '%';
+                if (progress === 100) {
+                    setTimeout(() => {
+                        replaceProgress.style.display = 'none';
+                        showSuccessNotification();
+                    }, 500);
+                }
+            };
+
             const replaceSequence = async () => {
-                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
-                const file2 = await readFile(file2Input.files[0]);
+                replaceProgress.style.display = 'block';
+                replaceProgressBar.style.width = '0%';
+                replaceProgressBar.textContent = '0%';
+
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0], file1ProgressBar, file1Progress);
+                const file2 = await readFile(file2Input.files[0], file2ProgressBar, file2Progress);
                 const range = rangeInput.value;
 
                 if (!file1 || !file2 || !range) {
                     alert("Selecciona ambos archivos y completa el rango de reemplazo.");
+                    replaceProgress.style.display = 'none';
                     return;
                 }
 
@@ -720,9 +847,15 @@ button:hover {
                 const start = parseInt(startHex, 16);
                 const end = parseInt(endHex, 16);
                 const length = end - start + 1;
+                const totalOperations = length + 4; // +4 por la operación de tamaño
+
+                let operationsCompleted = 0;
 
                 for (let i = 0; i < length; i++) {
                     baseView.setUint8(start + i, i < replacementView.byteLength ? replacementView.getUint8(i) : 0x00);
+                    operationsCompleted++;
+                    const progress = Math.floor((operationsCompleted / totalOperations) * 100);
+                    updateReplaceProgress(progress);
                 }
 
                 const foundNewAt = await searchHexSequence(file1, newSearchSequence.replace(/ /g, "").toLowerCase());
@@ -733,12 +866,16 @@ button:hover {
 
                     for (let i = 0; i < 4; i++) {
                         baseView.setUint8(sizeAddr + i, parseInt(sizeInHex.substr((3 - i) * 2, 2), 16));
+                        operationsCompleted++;
+                        const progress = Math.floor((operationsCompleted / totalOperations) * 100);
+                        updateReplaceProgress(progress);
                     }
                 }
 
                 replaceCounter++;
                 modifiedFileBuffer = file1;
                 resultDiv.textContent = `Reemplazo completado. Total reemplazos realizados: ${replaceCounter}`;
+                updateReplaceProgress(100);
             };
 
             const downloadModifiedFile = () => {
@@ -757,6 +894,7 @@ button:hover {
                 a.download = modifiedFileName;
                 a.click();
                 URL.revokeObjectURL(url);
+                showSuccessNotification();
             };
 
             const sanitizeFileName = (name) => {
@@ -773,7 +911,7 @@ button:hover {
             };
 
             const extractAndDownload = async () => {
-                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0]);
+                const file1 = modifiedFileBuffer || await readFile(file1Input.files[0], file1ProgressBar, file1Progress);
                 const range = rangeInput.value;
                 const selectedOption = selectAddresses.options[selectAddresses.selectedIndex];
 
@@ -799,6 +937,7 @@ button:hover {
                 a.download = fileName;
                 a.click();
                 URL.revokeObjectURL(url);
+                showSuccessNotification();
             };
 
             document.getElementById("btn-replace").addEventListener("click", replaceSequence);
